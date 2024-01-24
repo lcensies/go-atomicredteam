@@ -22,8 +22,10 @@ type AtomicTest struct {
 	GUID               string   `yaml:"auto_generated_guid,omitempty"`
 	Description        string   `yaml:"description,omitempty"`
 	SupportedPlatforms []string `yaml:"supported_platforms"`
-
+	// Definitions for test schema inputs
 	InputArugments map[string]InputArgument `yaml:"input_arguments,omitempty"`
+	// Real inputs for emulation
+	Inputs []string `yaml:"inputs"`
 
 	DependencyExecutorName string `yaml:"dependency_executor_name,omitempty"`
 

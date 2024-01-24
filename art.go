@@ -143,11 +143,15 @@ func InvokeEmulation(ctx *cli.Context) error {
 	for _, atomic := range emulation.Atomics {
 		for _, test := range atomic.AtomicTests {
 
-			var index int = -1
-			var inputs []string = ExpandStringSlice(ctx.StringSlice("input"))
-
 			var env []string
-			_, err := Execute(atomic.AttackTechnique, test.Name, index, inputs, env)
+			_, err := Execute(
+				atomic.AttackTechnique,
+				test.Name,
+				-1,
+				test.GUID,
+				test.Inputs,
+				env,
+			)
 			if err != nil {
 				fmt.Printf("Error while executing atomic test: %v", err.Error())
 			}
@@ -162,6 +166,7 @@ func InvokeAtomic(ctx *cli.Context) error {
 		tid    = ctx.String("technique")
 		name   = ctx.String("name")
 		index  = ctx.Int("index")
+		guid   = ctx.String("guid")
 		inputs = ExpandStringSlice(ctx.StringSlice("input"))
 		env    = ExpandStringSlice(ctx.StringSlice("env"))
 	)
@@ -170,8 +175,6 @@ func InvokeAtomic(ctx *cli.Context) error {
 		// Only honor --quiet flag if actually executing a test.
 		Quiet = ctx.Bool("quiet")
 	}
-
-	Println(string(Logo()))
 
 	if name != "" && index != -1 {
 		return cli.Exit("only provide one of 'name' or 'index' flags", 1)
@@ -348,14 +351,7 @@ func InvokeAtomic(ctx *cli.Context) error {
 
 	var err error
 
-	TEMPDIR, err = os.MkdirTemp("", "goart-")
-	if err != nil {
-		return cli.Exit(err, 1)
-	}
-
-	defer os.RemoveAll(TEMPDIR)
-
-	test, err := Execute(tid, name, index, inputs, env)
+	test, err := Execute(tid, name, index, guid, inputs, env)
 	if err != nil {
 		return cli.Exit(err, 1)
 	}

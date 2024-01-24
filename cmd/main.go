@@ -74,7 +74,8 @@ func main() {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			art.PrepareGlobals(ctx)
+			art.Configure(ctx)
+			defer art.Teardown(ctx)
 			if emulationPath := ctx.String("emulation-path"); emulationPath != "" {
 				return art.InvokeEmulation(ctx)
 			} else {

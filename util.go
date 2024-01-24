@@ -1,6 +1,7 @@
 package atomicredteam
 
 import (
+	"os"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -21,7 +22,7 @@ func ExpandStringSlice(s []string) []string {
 	return r
 }
 
-func PrepareGlobals(ctx *cli.Context) {
+func Configure(ctx *cli.Context) {
 	if HasBundledTechniques() || REPO != "" {
 		BUNDLED = true
 	} else {
@@ -31,4 +32,12 @@ func PrepareGlobals(ctx *cli.Context) {
 	if local := ctx.String("local-atomics-path"); local != "" {
 		LOCAL = local
 	}
+
+	TEMPDIR, _ = os.MkdirTemp(os.TempDir(), "goart-")
+
+	Println(string(Logo()))
+}
+
+func Teardown(ctx *cli.Context) {
+	os.RemoveAll(TEMPDIR)
 }

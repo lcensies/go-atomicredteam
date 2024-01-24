@@ -18,10 +18,11 @@ import (
 func Execute(
 	tid, name string,
 	index int,
+	guid string,
 	inputs []string,
 	env []string,
 ) (*types.AtomicTest, error) {
-	test, err := getTest(tid, name, index)
+	test, err := getTest(tid, name, index, guid)
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +426,7 @@ func DumpTechnique(dir, tid string) (string, error) {
 	return dir, nil
 }
 
-func getTest(tid, name string, index int) (*types.AtomicTest, error) {
+func getTest(tid, name string, index int, guid string) (*types.AtomicTest, error) {
 	Printf("\nGetting Atomic Tests technique %s from GitHub repo %s\n", tid, REPO)
 
 	technique, err := GetTechnique(tid)
@@ -437,7 +438,14 @@ func getTest(tid, name string, index int) (*types.AtomicTest, error) {
 
 	var test *types.AtomicTest
 
-	if index >= 0 && index < len(technique.AtomicTests) {
+	if guid != "" {
+		for _, t := range technique.AtomicTests {
+			if t.GUID == guid {
+				test = &t
+				break
+			}
+		}
+	} else if index >= 0 && index < len(technique.AtomicTests) {
 		test = &technique.AtomicTests[index]
 	} else {
 		for _, t := range technique.AtomicTests {
