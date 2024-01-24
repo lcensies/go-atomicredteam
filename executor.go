@@ -10,11 +10,17 @@ import (
 	"runtime"
 	"strings"
 
-	"actshad.dev/go-atomicredteam/types"
 	"gopkg.in/yaml.v3"
+
+	"actshad.dev/go-atomicredteam/types"
 )
 
-func Execute(tid, name string, index int, inputs []string, env []string) (*types.AtomicTest, error) {
+func Execute(
+	tid, name string,
+	index int,
+	inputs []string,
+	env []string,
+) (*types.AtomicTest, error) {
 	test, err := getTest(tid, name, index)
 	if err != nil {
 		return nil, err
@@ -61,7 +67,10 @@ func Execute(tid, name string, index int, inputs []string, env []string) (*types
 		}
 
 		if !found {
-			return nil, fmt.Errorf("dependency executor %s is not supported", test.DependencyExecutorName)
+			return nil, fmt.Errorf(
+				"dependency executor %s is not supported",
+				test.DependencyExecutorName,
+			)
 		}
 
 		Printf("\nChecking dependencies...\n")
@@ -246,10 +255,18 @@ func GetTechnique(tid string) (*types.Atomic, error) {
 	orgBranch := strings.Split(REPO, "/")
 
 	if len(orgBranch) != 2 {
-		return nil, fmt.Errorf("repo must be in format <org>/<branch> (name of repo in <org> must be 'atomic-red-team')")
+		return nil, fmt.Errorf(
+			"repo must be in format <org>/<branch> (name of repo in <org> must be 'atomic-red-team')",
+		)
 	}
 
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/atomic-red-team/%s/atomics/%s/%s.yaml", orgBranch[0], orgBranch[1], tid, tid)
+	url := fmt.Sprintf(
+		"https://raw.githubusercontent.com/%s/atomic-red-team/%s/atomics/%s/%s.yaml",
+		orgBranch[0],
+		orgBranch[1],
+		tid,
+		tid,
+	)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -397,7 +414,12 @@ func DumpTechnique(dir, tid string) (string, error) {
 
 	path = dir + "/" + tid + ".md"
 	if err := os.WriteFile(path, mdBody, 0644); err != nil {
-		return "", fmt.Errorf("writing test documentation for technique %s to %s: %w", tid, path, err)
+		return "", fmt.Errorf(
+			"writing test documentation for technique %s to %s: %w",
+			tid,
+			path,
+			err,
+		)
 	}
 
 	return dir, nil
@@ -524,7 +546,11 @@ func checkPlatform(test *types.AtomicTest) error {
 	return nil
 }
 
-func interpolateWithArgs(interpolatee, base string, args map[string]string, quiet bool) (string, error) {
+func interpolateWithArgs(
+	interpolatee, base string,
+	args map[string]string,
+	quiet bool,
+) (string, error) {
 	interpolated := strings.TrimSpace(interpolatee)
 
 	if len(args) == 0 {

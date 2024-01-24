@@ -5,6 +5,10 @@ package types
 
 var SupportedExecutors = []string{"bash", "command_prompt", "manual", "powershell", "sh"}
 
+type Emulation struct {
+	Atomics []Atomic `yaml:"atomics"`
+}
+
 type Atomic struct {
 	AttackTechnique string       `yaml:"attack_technique"`
 	DisplayName     string       `yaml:"display_name"`

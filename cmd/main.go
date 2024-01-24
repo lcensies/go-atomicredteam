@@ -1,21 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
-	"sort"
-	"strings"
-	"time"
+
+	"github.com/urfave/cli/v2"
 
 	art "actshad.dev/go-atomicredteam"
-
-	"github.com/charmbracelet/glamour"
-	"github.com/muesli/termenv"
-	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 )
 
 func main() {
@@ -24,6 +16,11 @@ func main() {
 		Usage:   "Standalone Atomic Red Team Executor (written in Go)",
 		Version: art.Version,
 		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "emulation-path",
+				Aliases: []string{"E"},
+				Usage:   "path to file with list of atomics",
+			},
 			&cli.StringFlag{
 				Name:    "technique",
 				Aliases: []string{"t"},
@@ -77,238 +74,12 @@ func main() {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			if art.REPO == "" {
-				art.REPO = ctx.String("repo")
+			art.PrepareGlobals(ctx)
+			if emulationPath := ctx.String("emulation-path"); emulationPath != "" {
+				return art.InvokeEmulation(ctx)
 			} else {
-				art.BUNDLED = true
+				return art.InvokeAtomic(ctx)
 			}
-
-			if local := ctx.String("local-atomics-path"); local != "" {
-				art.LOCAL = local
-			}
-
-			var (
-				tid    = ctx.String("technique")
-				name   = ctx.String("name")
-				index  = ctx.Int("index")
-				inputs = art.ExpandStringSlice(ctx.StringSlice("input"))
-				env    = art.ExpandStringSlice(ctx.StringSlice("env"))
-			)
-
-			if tid != "" && (name != "" || index != -1) {
-				// Only honor --quiet flag if actually executing a test.
-				art.Quiet = ctx.Bool("quiet")
-			}
-
-			art.Println(string(art.Logo()))
-
-			if name != "" && index != -1 {
-				return cli.Exit("only provide one of 'name' or 'index' flags", 1)
-			}
-
-			if tid == "" {
-				filter := make(map[string]struct{})
-
-				listTechniques := func() ([]string, error) {
-					var (
-						techniques   []string
-						descriptions []string
-					)
-
-					for technique := range filter {
-						techniques = append(techniques, technique)
-					}
-
-					sort.Strings(techniques)
-
-					for _, tid := range techniques {
-						technique, err := art.GetTechnique(tid)
-						if err != nil {
-							return nil, fmt.Errorf("unable to get technique %s: %w", tid, err)
-						}
-
-						descriptions = append(descriptions, fmt.Sprintf("%s - %s", tid, technique.DisplayName))
-					}
-
-					return descriptions, nil
-				}
-
-				getLocalTechniques := func() error {
-					files, err := ioutil.ReadDir(art.LOCAL)
-					if err != nil {
-						return fmt.Errorf("unable to read contents of provided local atomics path: %w", err)
-					}
-
-					for _, f := range files {
-						if f.IsDir() && strings.HasPrefix(f.Name(), "T") {
-							filter[f.Name()] = struct{}{}
-						}
-					}
-
-					return nil
-				}
-
-				if art.BUNDLED {
-					// Get bundled techniques first.
-					for _, asset := range art.Techniques() {
-						filter[asset] = struct{}{}
-					}
-
-					// We want to get local techniques after getting bundled techniques so
-					// the local techniques will replace any bundled techniques with the
-					// same ID.
-					if art.LOCAL != "" {
-						if err := getLocalTechniques(); err != nil {
-							return cli.Exit(err.Error(), 1)
-						}
-					}
-
-					descriptions, err := listTechniques()
-					if err != nil {
-						cli.Exit(err.Error(), 1)
-					}
-
-					art.Println("Locally Available Techniques:\n")
-
-					for _, desc := range descriptions {
-						art.Println(desc)
-					}
-
-					return nil
-				}
-
-				// Even if we're not running in bundled mode, still see if the user
-				// wants to load any local techniques.
-				if art.LOCAL != "" {
-					if err := getLocalTechniques(); err != nil {
-						return cli.Exit(err.Error(), 1)
-					}
-
-					descriptions, err := listTechniques()
-					if err != nil {
-						cli.Exit(err.Error(), 1)
-					}
-
-					art.Println("Locally Available Techniques:\n")
-
-					for _, desc := range descriptions {
-						art.Println(desc)
-					}
-				}
-
-				orgBranch := strings.Split(art.REPO, "/")
-
-				if len(orgBranch) != 2 {
-					return cli.Exit("repo must be in format <org>/<branch>", 1)
-				}
-
-				url := fmt.Sprintf("https://github.com/%s/atomic-red-team/tree/%s/atomics", orgBranch[0], orgBranch[1])
-
-				art.Printf("Please see %s for a list of available default techniques", url)
-
-				return nil
-			}
-
-			if name == "" && index == -1 {
-				if dump := ctx.String("dump-technique"); dump != "" {
-					dir, err := art.DumpTechnique(dump, tid)
-					if err != nil {
-						return cli.Exit("error dumping technique: "+err.Error(), 1)
-					}
-
-					art.Printf("technique %s files dumped to %s", tid, dir)
-
-					return nil
-				}
-
-				technique, err := art.GetTechnique(tid)
-				if err != nil {
-					return cli.Exit("error getting details for "+tid, 1)
-				}
-
-				art.Printf("Technique: %s - %s\n", technique.AttackTechnique, technique.DisplayName)
-				art.Println("Tests:")
-
-				for i, t := range technique.AtomicTests {
-					art.Printf("  %d. %s\n", i, t.Name)
-				}
-
-				md, err := art.GetMarkdown(tid)
-				if err != nil {
-					return cli.Exit("error getting Markdown for "+tid, 1)
-				}
-
-				if runtime.GOOS == "windows" {
-					art.Println(string(md))
-				} else {
-					options := []glamour.TermRendererOption{glamour.WithWordWrap(100)}
-
-					if ctx.Bool("no-color") {
-						options = append(options, glamour.WithColorProfile(termenv.Ascii))
-					} else {
-						options = append(options, glamour.WithStylePath("dark"))
-					}
-
-					renderer, err := glamour.NewTermRenderer(options...)
-					if err != nil {
-						return cli.Exit("error creating new Markdown renderer", 1)
-					}
-
-					out, err := renderer.RenderBytes(md)
-					if err != nil {
-						return cli.Exit("error rendering Markdown for "+tid, 1)
-					}
-
-					art.Print(string(out))
-				}
-
-				return nil
-			}
-
-			var err error
-
-			art.TEMPDIR, err = os.MkdirTemp("", "goart-")
-			if err != nil {
-				return cli.Exit(err, 1)
-			}
-
-			defer os.RemoveAll(art.TEMPDIR)
-
-			test, err := art.Execute(tid, name, index, inputs, env)
-			if err != nil {
-				return cli.Exit(err, 1)
-			}
-
-			var (
-				plan []byte
-				ext  = strings.ToLower(ctx.String("results-format"))
-			)
-
-			switch ext {
-			case "json":
-				plan, _ = json.Marshal(test)
-			case "yaml":
-				plan, _ = yaml.Marshal(test)
-			default:
-				return cli.Exit("unknown results format provided", 1)
-			}
-
-			out := ctx.String("results-file")
-
-			if out == "-" {
-				art.Println()
-				fmt.Println(string(plan))
-				return nil
-			}
-
-			if out == "" {
-				now := strings.ReplaceAll(time.Now().UTC().Format(time.RFC3339), ":", ".")
-				out = fmt.Sprintf("atomic-test-executor-execution-%s-%s.%s", tid, now, ext)
-			}
-
-			ioutil.WriteFile(out, plan, 0644)
-
-			return nil
 		},
 	}
 

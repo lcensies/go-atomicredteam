@@ -1,6 +1,10 @@
 package atomicredteam
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/urfave/cli/v2"
+)
 
 func ExpandStringSlice(s []string) []string {
 	if len(s) == 0 {
@@ -15,4 +19,16 @@ func ExpandStringSlice(s []string) []string {
 	}
 
 	return r
+}
+
+func PrepareGlobals(ctx *cli.Context) {
+	if HasBundledTechniques() || REPO != "" {
+		BUNDLED = true
+	} else {
+		REPO = ctx.String("repo")
+	}
+
+	if local := ctx.String("local-atomics-path"); local != "" {
+		LOCAL = local
+	}
 }
