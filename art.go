@@ -141,7 +141,13 @@ func InvokeEmulation(ctx *cli.Context) error {
 	}
 
 	for _, atomic := range emulation.Atomics {
+		if atomic.Disabled {
+			continue
+		}
 		for _, test := range atomic.AtomicTests {
+			if test.Disabled {
+				continue
+			}
 
 			var env []string
 			_, err := Execute(

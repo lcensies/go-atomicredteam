@@ -15,6 +15,8 @@ type Atomic struct {
 	AtomicTests     []AtomicTest `yaml:"atomic_tests"`
 
 	BaseDir string `yaml:"-"`
+
+	Disabled bool `yaml:"disabled"`
 }
 
 type AtomicTest struct {
@@ -33,6 +35,8 @@ type AtomicTest struct {
 	Executor     *AtomicExecutor `yaml:"executor"`
 
 	BaseDir string `yaml:"-"`
+
+	Disabled bool `yaml:"disabled"`
 }
 
 type InputArgument struct {
