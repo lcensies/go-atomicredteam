@@ -9,11 +9,29 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"actshad.dev/go-atomicredteam/types"
 )
+
+func PrintTestSummary(tid string, env []string, test *types.AtomicTest) {
+	Println(" Technique: " + tid)
+	Println(" Test:      " + test.Name)
+
+	if test.Inputs == nil {
+		Println(" Inputs:    <none>")
+	} else {
+		Println(" Inputs:    " + strings.Join(test.Inputs, "\n            "))
+	}
+
+	if env == nil {
+		Println(" Env:       <none>")
+	} else {
+		Println(" Env:       " + strings.Join(env, "\n            "))
+	}
+}
 
 func Execute(
 	tid, name string,
@@ -30,23 +48,8 @@ func Execute(
 	Println()
 
 	Println("****** EXECUTION PLAN ******")
-	Println(" Technique: " + tid)
-	Println(" Test:      " + test.Name)
 
-	if inputs == nil {
-		Println(" Inputs:    <none>")
-	} else {
-		Println(" Inputs:    " + strings.Join(inputs, "\n            "))
-	}
-
-	if env == nil {
-		Println(" Env:       <none>")
-	} else {
-		Println(" Env:       " + strings.Join(env, "\n            "))
-	}
-
-	Println(" * Use at your own risk :) *")
-	Println("****************************")
+	PrintTestSummary(tid, env, test)
 
 	args, err := checkArgsAndGetDefaults(test, inputs)
 	if err != nil {
@@ -735,4 +738,33 @@ func executeManual(command string) (string, error) {
 	}
 
 	return command, nil
+}
+
+type TestResult struct {
+	Test  *types.AtomicTest
+	Error error
+}
+
+func ExecuteWithTimeout(
+	tid, name string,
+	index int,
+	guid string,
+	inputs []string,
+	env []string,
+	timeout_sec int,
+) (*types.AtomicTest, error) {
+	timeout := time.Duration(900) * time.Second
+
+	resultChan := make(chan TestResult)
+	go func() {
+		test, err := Execute(tid, name, index, guid, inputs, env)
+		resultChan <- TestResult{Test: test, Error: err}
+	}()
+
+	select {
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("\nExecution of %v is timed out\n", name)
+	case result := <-resultChan:
+		return result.Test, result.Error
+	}
 }

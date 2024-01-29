@@ -6,7 +6,9 @@ package types
 var SupportedExecutors = []string{"bash", "command_prompt", "manual", "powershell", "sh"}
 
 type Emulation struct {
-	Atomics []Atomic `yaml:"atomics"`
+	Atomics        []Atomic `yaml:"atomics"`
+	CleanupEnabled bool     `yaml:"cleanup_enabled"`
+	CommandTimeout *int     `yaml:"command_timeout,omitempty"`
 }
 
 type Atomic struct {

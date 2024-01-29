@@ -31,6 +31,13 @@ func main() {
 				Aliases: []string{"n"},
 				Usage:   "test name",
 			},
+			&cli.StringFlag{
+				Name:    "guid",
+				Aliases: []string{"G"},
+				Usage:   "test guid",
+				Value:   "",
+			},
+
 			&cli.IntFlag{
 				Name:    "index",
 				Aliases: []string{"i"},

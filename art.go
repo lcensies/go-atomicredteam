@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"regexp"
 	"runtime"
@@ -134,6 +135,7 @@ func LoadEmulation(emulationPath string) (*types.Emulation, error) {
 }
 
 func InvokeEmulation(ctx *cli.Context) error {
+	var env []string
 	emulationPath := ctx.String("emulation-path")
 	emulation, err := LoadEmulation(emulationPath)
 	if err != nil {
@@ -149,22 +151,75 @@ func InvokeEmulation(ctx *cli.Context) error {
 				continue
 			}
 
-			var env []string
-			_, err := Execute(
+			timeout := emulation.CommandTimeout
+			if timeout == nil {
+				newTimeout := math.MaxInt32
+				timeout = &newTimeout
+			}
+
+			fmt.Printf("Timeout: %v", *timeout)
+
+			_, err := ExecuteWithTimeout(
 				atomic.AttackTechnique,
 				test.Name,
 				-1,
 				test.GUID,
 				test.Inputs,
 				env,
+				*timeout,
 			)
 			if err != nil {
 				fmt.Printf("Error while executing atomic test: %v", err.Error())
+			}
+
+		}
+	}
+
+	if !emulation.CleanupEnabled {
+		return nil
+	}
+
+	for _, atomic := range emulation.Atomics {
+		for _, test := range atomic.AtomicTests {
+			err = CleanupAfterTest(&test, test.Inputs)
+			if err != nil {
+				fmt.Printf(
+					"Error while executing cleanup command for test %v: %v",
+					test.Name,
+					err.Error(),
+				)
 			}
 		}
 	}
 
 	return nil
+}
+
+func CleanupAfterTest(test *types.AtomicTest, inputs []string) error {
+	args, err := checkArgsAndGetDefaults(test, inputs)
+
+	command, err := interpolateWithArgs(test.Executor.CleanupCommand, test.BaseDir, args, true)
+	if err != nil {
+		return err
+	}
+
+	// TODO: parametrize env
+	var env []string
+
+	switch test.DependencyExecutorName {
+	case "bash":
+		_, err = executeBash(command, env)
+	case "command_prompt":
+		_, err = executeCommandPrompt(command, env)
+	case "manual":
+		_, err = executeManual(command)
+	case "powershell":
+		_, err = executePowerShell(command, env)
+	case "sh":
+		_, err = executeSh(command, env)
+	}
+
+	return err
 }
 
 func InvokeAtomic(ctx *cli.Context) error {
@@ -186,6 +241,7 @@ func InvokeAtomic(ctx *cli.Context) error {
 		return cli.Exit("only provide one of 'name' or 'index' flags", 1)
 	}
 
+	// TODO: add tid lookup by test id
 	if tid == "" {
 		filter := make(map[string]struct{})
 
