@@ -155,9 +155,9 @@ func InvokeEmulation(ctx *cli.Context) error {
 			if timeout == nil {
 				newTimeout := math.MaxInt32
 				timeout = &newTimeout
+			} else {
+				fmt.Printf("Command timeout: %v sec\n", *timeout)
 			}
-
-			fmt.Printf("Timeout: %v", *timeout)
 
 			_, err := ExecuteWithTimeout(
 				atomic.AttackTechnique,
@@ -169,7 +169,7 @@ func InvokeEmulation(ctx *cli.Context) error {
 				*timeout,
 			)
 			if err != nil {
-				fmt.Printf("Error while executing atomic test: %v", err.Error())
+				fmt.Printf("Error while executing atomic test: %v\n", err.Error())
 			}
 
 		}
