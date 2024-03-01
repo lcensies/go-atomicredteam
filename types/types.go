@@ -9,6 +9,7 @@ type Emulation struct {
 	Atomics        []Atomic `yaml:"atomics"`
 	CleanupEnabled bool     `yaml:"cleanup_enabled"`
 	CommandTimeout *int     `yaml:"command_timeout,omitempty"`
+	SignaturesOnly *bool    `yaml:"signatures_only,omitempty"`
 }
 
 type Atomic struct {
@@ -20,6 +21,8 @@ type Atomic struct {
 
 	Disabled bool `yaml:"disabled"`
 }
+
+type StringArray []string
 
 type AtomicTest struct {
 	Name               string   `yaml:"name"`
@@ -39,6 +42,12 @@ type AtomicTest struct {
 	BaseDir string `yaml:"-"`
 
 	Disabled bool `yaml:"disabled"`
+
+	Signatures *StringArray `yaml:"signatures,omitempty"`
+}
+
+type Data struct {
+	Field StringArray
 }
 
 type InputArgument struct {
