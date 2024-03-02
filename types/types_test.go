@@ -38,4 +38,7 @@ func TestParsesEmulation(t *testing.T) {
 
 	signatures = *t1543.AtomicTests[0].Signatures
 	assert.Equal(t, 2, len(signatures))
+
+	sigsOnly := *emulation.SignaturesOnly
+	assert.Equal(t, true, sigsOnly)
 }

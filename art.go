@@ -142,12 +142,23 @@ func InvokeEmulation(ctx *cli.Context) error {
 		return err
 	}
 
+	sigsOnly := false
+	if emulation.SignaturesOnly != nil {
+		sigsOnly = *emulation.SignaturesOnly
+	}
+
 	for _, atomic := range emulation.Atomics {
 		if atomic.Disabled {
 			continue
 		}
+
 		for _, test := range atomic.AtomicTests {
 			if test.Disabled {
+				continue
+			}
+
+			var signatures []string = *test.Signatures
+			if sigsOnly && len(signatures) == 0 {
 				continue
 			}
 

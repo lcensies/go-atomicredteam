@@ -1,4 +1,4 @@
-
+signatures_only: true
 atomics:
   - attack_technique: T1048.002
     atomic_tests:
