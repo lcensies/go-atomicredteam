@@ -157,7 +157,10 @@ func InvokeEmulation(ctx *cli.Context) error {
 				continue
 			}
 
-			var signatures []string = *test.Signatures
+			var signatures []string
+			if test.Signatures != nil {
+				signatures = *test.Signatures
+			}
 			if sigsOnly && len(signatures) == 0 {
 				continue
 			}
